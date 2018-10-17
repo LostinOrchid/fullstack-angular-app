@@ -41,8 +41,6 @@ interface Response {
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'client';
-
   users = [];
 
   error = null;
@@ -81,20 +79,25 @@ export class AppComponent implements OnInit {
 
     this.form.submitting = true;
 
-    setTimeout(() => {
-      this.apollo.mutate({
-        mutation: createUser,
-        variables: {
-          input
-        }
-      }).subscribe(({ data }) => {
-        this.clearForm();
-        this.form.submitting = false;
-        console.log('got data', data);
-      }, (error) => {
-        console.log('there was an error sending the query', error);
-      });
-    }, 2000);
+    this.apollo.mutate({
+      mutation: createUser,
+      variables: {
+        input
+      },
+      update: (cache, { data: { createUser } }) => {
+        const { users } = cache.readQuery({ query: usersQuery });
+
+        console.log('update lang', { createUser, users });
+
+        cache.writeQuery({ query: usersQuery, data: { users: users.concat([createUser]) } });
+      }
+    }).subscribe(({ data }) => {
+      this.clearForm();
+      this.form.submitting = false;
+      console.log('got data', data);
+    }, (error) => {
+      console.log('there was an error sending the query', error);
+    });
   }
 
   clearForm() {
